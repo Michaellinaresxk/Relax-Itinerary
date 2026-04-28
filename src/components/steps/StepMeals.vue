@@ -3,12 +3,13 @@ import FormField from '@/components/ui/FormField.vue'
 import OptionCard from '@/components/ui/OptionCard.vue'
 import { useFormData } from '@/composables/useFormData'
 import { useDays } from '@/composables/useDays'
-import { MEAL_TIMES } from '@/constants/catalog'
+import { MEAL_TIMES, CHEF_OPTIONS, CHEF_NOTE, CASH_RATE_NOTE } from '@/constants/catalog'
 import { formatDateShort, toISOKey } from '@/utils/dates'
+import type { ChefTier } from '@/types'
 import { ref, computed } from 'vue'
 
 const { state, updateField, updateMeal } = useFormData()
-const { days, hasDays } = useDays()
+const { days, numDays, hasDays } = useDays()
 
 const activeDayIdx = ref(0)
 const activeDay = computed(() => days.value[activeDayIdx.value])
@@ -23,6 +24,19 @@ function filledMealsForDay(dayKey: string): number {
   if (!m) return 0
   return Object.values(m).filter(v => v.trim()).length
 }
+
+function selectChef(tier: ChefTier) {
+  updateField('chefTier', state.chefTier === tier ? null : tier)
+}
+
+const selectedChef = computed(() =>
+  CHEF_OPTIONS.find(c => c.id === state.chefTier),
+)
+
+const chefTotal = computed(() => {
+  if (!selectedChef.value) return 0
+  return selectedChef.value.pricePerDay * numDays.value
+})
 </script>
 
 <template>
@@ -32,11 +46,30 @@ function filledMealsForDay(dayKey: string): number {
     </p>
 
     <template v-else>
-      <div class="warn">
-        Los ingredientes para la preparación de comidas no están incluidos en el servicio.
-        Se cobran por separado durante la estancia.
+      <!-- Chef service -->
+      <div class="section-label">Servicio de cocina</div>
+      <p class="hint">Selecciona el tipo de servicio. Puedes omitir si no necesitas chef.</p>
+
+      <div class="chef-grid">
+        <div v-for="opt in CHEF_OPTIONS" :key="opt.id!" class="chef-card"
+          :class="{ 'chef-card--selected': state.chefTier === opt.id }" @click="selectChef(opt.id)">
+          <div class="chef-card__top">
+            <span class="chef-card__name">{{ opt.name }}</span>
+            <span class="chef-card__price">${{ opt.pricePerDay }} / día</span>
+          </div>
+          <p class="chef-card__desc">{{ opt.description }}</p>
+          <div v-if="state.chefTier === opt.id" class="chef-card__total">
+            ~${{ opt.pricePerDay * numDays }} total ({{ numDays }} días)
+          </div>
+        </div>
       </div>
 
+      <p class="chef-note">{{ CHEF_NOTE }}</p>
+      <p class="cash-note">{{ CASH_RATE_NOTE }}</p>
+
+      <div class="divider" />
+
+      <!-- Grocery -->
       <div class="section-label">Servicio de compras</div>
       <div class="opt-grid">
         <OptionCard icon="" title="Sí, por favor" description="Nos encargamos de todo"
@@ -46,6 +79,10 @@ function filledMealsForDay(dayKey: string): number {
       </div>
 
       <div v-if="state.wantGrocery" style="margin-bottom: 24px">
+        <div class="warn">
+          Tarifa de envío: US$60 por viaje, además del costo total de la compra.
+          Se te proporcionará una lista para completar al menos 3 días antes de tu llegada.
+        </div>
         <FormField label="Notas para la compra" hint="Marcas preferidas, cantidades, sustitutos aceptables">
           <textarea class="inp" style="min-height:56px" :value="state.groceryNotes"
             placeholder="Ej: Agua Cristal x24, leche de almendras, frutas frescas variadas..."
@@ -55,6 +92,7 @@ function filledMealsForDay(dayKey: string): number {
 
       <div class="divider" />
 
+      <!-- Meal preferences -->
       <div class="section-label">Preferencias por día</div>
 
       <div class="day-pills">
@@ -77,6 +115,16 @@ function filledMealsForDay(dayKey: string): number {
             @input="updateMeal(activeDayKey, meal, ($event.target as HTMLTextAreaElement).value)" />
         </div>
       </div>
+
+      <!-- Allergies in this step since it's food-related -->
+      <div class="divider" />
+      <div class="section-label">Alergias</div>
+      <FormField label="Alergias o restricciones alimentarias"
+        hint="De cualquier invitado — esto es importante para su seguridad.">
+        <textarea class="inp" style="min-height:56px" :value="state.allergies"
+          placeholder="Ej: Konstance es alérgica a los frutos secos."
+          @input="updateField('allergies', ($event.target as HTMLTextAreaElement).value)" />
+      </FormField>
     </template>
   </div>
 </template>
@@ -99,15 +147,11 @@ function filledMealsForDay(dayKey: string): number {
   margin: 24px 0;
 }
 
-.warn {
-  padding: 14px 18px;
-  border-radius: var(--radius-md);
-  background: var(--c-warm-bg);
-  border: 1px solid var(--c-warm-border);
+.hint {
   font-size: 12px;
-  color: var(--c-warm-text);
+  color: var(--c-hint);
+  margin-bottom: 14px;
   font-weight: 300;
-  margin-bottom: 24px;
   line-height: 1.5;
 }
 
@@ -118,6 +162,83 @@ function filledMealsForDay(dayKey: string): number {
   font-weight: 300;
 }
 
+/* Chef cards */
+.chef-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.chef-card {
+  padding: 18px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration) var(--ease);
+}
+
+.chef-card:hover {
+  border-color: var(--c-border-hover);
+}
+
+.chef-card--selected {
+  border-color: var(--c-accent-soft);
+  background: var(--c-accent-whisper);
+}
+
+.chef-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.chef-card__name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--c-deep);
+}
+
+.chef-card__price {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--c-deep);
+}
+
+.chef-card__desc {
+  font-size: 11px;
+  color: var(--c-soft);
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.chef-card__total {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--c-border);
+  font-size: 12px;
+  color: var(--c-accent);
+  font-weight: 400;
+}
+
+.chef-note {
+  font-size: 11px;
+  color: var(--c-warm);
+  font-weight: 300;
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+.cash-note {
+  font-size: 11px;
+  color: var(--c-hint);
+  font-weight: 300;
+  font-style: italic;
+}
+
+/* Grocery */
 .opt-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -125,7 +246,19 @@ function filledMealsForDay(dayKey: string): number {
   margin-bottom: 20px;
 }
 
-/* ── Day pills ───────────────────────────── */
+.warn {
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  background: var(--c-warm-bg);
+  border: 1px solid var(--c-warm-border);
+  font-size: 12px;
+  color: var(--c-warm-text);
+  font-weight: 300;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* Day pills */
 .day-pills {
   display: flex;
   gap: 6px;
@@ -181,7 +314,7 @@ function filledMealsForDay(dayKey: string): number {
   font-weight: 300;
 }
 
-/* ── Meal cards ──────────────────────────── */
+/* Meal cards */
 .meal-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -236,7 +369,8 @@ function filledMealsForDay(dayKey: string): number {
 @media (max-width: 480px) {
 
   .opt-grid,
-  .meal-grid {
+  .meal-grid,
+  .chef-grid {
     grid-template-columns: 1fr;
   }
 }

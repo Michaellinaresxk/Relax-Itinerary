@@ -2,7 +2,10 @@
 import Accordion from '@/components/ui/Accordion.vue'
 import { useFormData } from '@/composables/useFormData'
 import { useDays } from '@/composables/useDays'
-import { ACTIVITY_CATEGORIES, ALL_ACTIVITIES, EQUIPMENT } from '@/constants/catalog'
+import {
+  ACTIVITY_CATEGORIES, ALL_ACTIVITIES, EQUIPMENT,
+  EQUIPMENT_SCHEDULE, CASH_RATE_NOTE,
+} from '@/constants/catalog'
 import { formatDateLong, toISOKey } from '@/utils/dates'
 import { computed, ref } from 'vue'
 
@@ -29,6 +32,17 @@ function selectedCountForDay(dayKey: string): number {
 
 function isEqSelected(id: string) { return state.equipment.some(e => e.id === id) }
 function getEqQty(id: string) { return state.equipment.find(e => e.id === id)?.quantity || 1 }
+
+function eqPriceDisplay(eq: typeof EQUIPMENT[number]): string {
+  if (eq.priceType === 'quote') return 'Cotizar'
+  return `$${eq.pricePerNight} / noche`
+}
+
+function eqTotalDisplay(eq: typeof EQUIPMENT[number]): string {
+  if (eq.priceType === 'quote' || !eq.pricePerNight) return ''
+  const qty = getEqQty(eq.id)
+  return ` · ~$${eq.pricePerNight * qty * numDays.value} total`
+}
 </script>
 
 <template>
@@ -40,8 +54,8 @@ function getEqQty(id: string) { return state.equipment.find(e => e.id === id)?.q
     <template v-else>
       <div class="section-label">Actividades por día</div>
       <p class="hint">
-        Selecciona las experiencias que te interesan. Los servicios marcados como
-        <em class="hint--quote">cotizar</em> serán confirmados por tu concierge.
+        Todos los servicios serán cotizados y confirmados por tu concierge.
+        Indica lo que te interesa para preparar tu propuesta.
       </p>
 
       <div class="day-pills">
@@ -102,7 +116,10 @@ function getEqQty(id: string) { return state.equipment.find(e => e.id === id)?.q
     <div class="divider" />
 
     <div class="section-label">Equipamiento</div>
-    <p class="hint">Entrega y recogida en la villa incluidas.</p>
+    <p class="hint">
+      Entrega: {{ EQUIPMENT_SCHEDULE.delivery }} · Devolución: {{ EQUIPMENT_SCHEDULE.returnTime }}.
+      Tarifas por noche, sujetas a disponibilidad.
+    </p>
 
     <div class="eq-list">
       <div v-for="eq in EQUIPMENT" :key="eq.id" class="eq-card" :class="{ 'eq-card--selected': isEqSelected(eq.id) }"
@@ -110,7 +127,8 @@ function getEqQty(id: string) { return state.equipment.find(e => e.id === id)?.q
         <img :src="eq.image" :alt="eq.name" class="eq-card__img" loading="lazy" />
         <div class="eq-card__info">
           <p class="eq-card__name">{{ eq.name }}</p>
-          <p class="eq-card__price">${{ eq.perDay }} / día · ~${{ eq.perDay * numDays }} total</p>
+          <p class="eq-card__price">{{ eqPriceDisplay(eq) }}{{ isEqSelected(eq.id) ? eqTotalDisplay(eq) : '' }}</p>
+          <p v-if="eq.note" class="eq-card__note">{{ eq.note }}</p>
         </div>
         <div class="chk" :class="{ 'chk--on': isEqSelected(eq.id) }">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -125,6 +143,8 @@ function getEqQty(id: string) { return state.equipment.find(e => e.id === id)?.q
         </div>
       </div>
     </div>
+
+    <p class="cash-note">{{ CASH_RATE_NOTE }}</p>
   </div>
 </template>
 
@@ -166,7 +186,15 @@ function getEqQty(id: string) { return state.equipment.find(e => e.id === id)?.q
   margin: 28px 0;
 }
 
-/* ── Day pills ───────────────────────────── */
+.cash-note {
+  font-size: 11px;
+  color: var(--c-hint);
+  font-weight: 300;
+  font-style: italic;
+  margin-top: 12px;
+}
+
+/* Day pills */
 .day-pills {
   display: flex;
   gap: 6px;
@@ -222,7 +250,7 @@ function getEqQty(id: string) { return state.equipment.find(e => e.id === id)?.q
   font-weight: 300;
 }
 
-/* ── Activity photo cards ────────────────── */
+/* Activity photo cards */
 .act-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -338,7 +366,7 @@ function getEqQty(id: string) { return state.equipment.find(e => e.id === id)?.q
   letter-spacing: 0.3px;
 }
 
-/* ── Equipment ───────────────────────────── */
+/* Equipment */
 .eq-list {
   display: flex;
   flex-direction: column;
@@ -389,6 +417,14 @@ function getEqQty(id: string) { return state.equipment.find(e => e.id === id)?.q
   color: var(--c-hint);
   font-weight: 300;
   margin-top: 1px;
+}
+
+.eq-card__note {
+  font-size: 10px;
+  color: var(--c-warm);
+  font-weight: 300;
+  font-style: italic;
+  margin-top: 2px;
 }
 
 .chk {

@@ -85,14 +85,8 @@ const groupLabel = computed(() => {
       <button class="btn-add" @click="addGuest">+ Agregar invitado</button>
     </Accordion>
 
-    <Accordion title="Alergias e instrucciones especiales">
-      <FormField label="Alergias o restricciones alimentarias"
-        hint="De cualquier invitado — esto es importante para su seguridad.">
-        <textarea class="inp" style="min-height:56px" :value="state.allergies"
-          placeholder="Ej: Konstance es alérgica a los frutos secos."
-          @input="updateField('allergies', ($event.target as HTMLTextAreaElement).value)" />
-      </FormField>
-      <FormField label="Instrucciones especiales" hint="Cumpleaños, sorpresas, solicitudes especiales">
+    <Accordion title="Instrucciones especiales">
+      <FormField label="Notas especiales" hint="Cumpleaños, sorpresas, solicitudes especiales">
         <textarea class="inp" style="min-height:56px" :value="state.specialNotes"
           placeholder="Ej: Celebramos el aniversario de María el día 2."
           @input="updateField('specialNotes', ($event.target as HTMLTextAreaElement).value)" />
