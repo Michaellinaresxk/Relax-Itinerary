@@ -11,8 +11,7 @@ export function useWizard() {
   const totalSteps = STEPS.length
 
   // Explicit generic + fallback ensures TS never infers undefined
-  const currentMeta = computed<StepMeta>(() => STEPS[currentStep.value] ?? STEPS[0])
-
+  const currentMeta = computed<StepMeta>(() => STEPS[currentStep.value] as StepMeta)
   const progress = computed(() => ((currentStep.value + 1) / totalSteps) * 100)
   const isFirstStep = computed(() => currentStep.value === 0)
   const isLastStep = computed(() => currentStep.value === totalSteps - 1)
