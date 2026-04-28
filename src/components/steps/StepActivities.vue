@@ -13,7 +13,7 @@ const { state, toggleActivity, updateActivity, toggleEquipment, updateEquipmentQ
 const { days, numDays, hasDays } = useDays()
 
 const activeDayIdx = ref(0)
-const activeDay = computed(() => days.value[activeDayIdx.value])
+const activeDay = computed<Date>(() => days.value[activeDayIdx.value] ?? new Date())
 const activeDayKey = computed(() => activeDay.value ? toISOKey(activeDay.value) : '')
 
 function selectDay(i: number) { activeDayIdx.value = i }
