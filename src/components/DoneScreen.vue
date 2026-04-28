@@ -14,8 +14,10 @@ defineEmits<{ backToReview: [] }>()
       <div class="done__line" />
       <h1 class="done__title">Gracias, {{ firstName }}</h1>
       <p class="done__text">
-        Tu itinerario se descargó como documento Word (.docx).<br />
-        Completa los campos pendientes, conviértelo a PDF y envíalo al huésped.
+        Tu itinerario fue enviado al equipo de concierge y también
+        se descargó como documento Word (.docx) en tu dispositivo.<br /><br />
+        Nuestro equipo revisará tu información, completará los detalles
+        pendientes y te enviará el itinerario final por correo.
       </p>
 
       <div class="done__contact">

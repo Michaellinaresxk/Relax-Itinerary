@@ -2,7 +2,10 @@
 import { computed } from 'vue'
 import { useFormData } from '@/composables/useFormData'
 import { useDays } from '@/composables/useDays'
-import { ALL_ACTIVITIES, EQUIPMENT } from '@/constants/catalog'
+import {
+  ALL_ACTIVITIES, EQUIPMENT, TRANSFER_VEHICLES,
+  CHEF_OPTIONS, EQUIPMENT_SCHEDULE,
+} from '@/constants/catalog'
 import { formatDateShort, toISOKey } from '@/utils/dates'
 
 const { state } = useFormData()
@@ -11,15 +14,24 @@ const { days, numDays } = useDays()
 const filledGuests = computed(() => state.guests.filter(g => g.name.trim()))
 
 const hasActivities = computed(() =>
-  days.value.some(d => (state.dayActivities[toISOKey(d)] || []).length > 0)
+  days.value.some(d => (state.dayActivities[toISOKey(d)] || []).length > 0),
+)
+
+const selectedVehicle = computed(() =>
+  TRANSFER_VEHICLES.find(v => v.id === state.transferVehicleId),
+)
+
+const selectedChef = computed(() =>
+  CHEF_OPTIONS.find(c => c.id === state.chefTier),
 )
 
 function actName(id: string) { return ALL_ACTIVITIES.find(a => a.id === id) }
-function eqName(id: string) { return EQUIPMENT.find(e => e.id === id) }
+function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
 </script>
 
 <template>
   <div>
+    <!-- Guest -->
     <section class="sec">
       <span class="sec__tag">Huésped principal</span>
       <div class="row"><span class="row__l">Nombre</span><span class="row__v">{{ state.mainGuest }}</span></div>
@@ -38,6 +50,7 @@ function eqName(id: string) { return EQUIPMENT.find(e => e.id === id) }
       </div>
     </section>
 
+    <!-- Guests list -->
     <section v-if="filledGuests.length" class="sec">
       <span class="sec__tag">Invitados</span>
       <div v-for="(g, i) in filledGuests" :key="i" class="row">
@@ -46,6 +59,7 @@ function eqName(id: string) { return EQUIPMENT.find(e => e.id === id) }
       </div>
     </section>
 
+    <!-- Flights -->
     <section class="sec">
       <span class="sec__tag">Vuelos</span>
       <template v-for="(f, i) in state.arrivalFlights.filter(f => f.code)" :key="'a' + i">
@@ -58,7 +72,7 @@ function eqName(id: string) { return EQUIPMENT.find(e => e.id === id) }
         <div class="row">
           <span class="row__l">Salida {{ i + 1 }}</span>
           <span class="row__v">{{ f.airline }} {{ f.code }} · {{ f.date }} {{ f.time }} · hacia {{ f.destination
-            }}</span>
+          }}</span>
         </div>
       </template>
       <p v-if="!state.arrivalFlights.some(f => f.code) && !state.departureFlights.some(f => f.code)" class="empty-hint">
@@ -66,20 +80,29 @@ function eqName(id: string) { return EQUIPMENT.find(e => e.id === id) }
       </p>
     </section>
 
+    <!-- Transfer -->
     <section class="sec">
       <span class="sec__tag">Transporte</span>
       <div class="row">
         <span class="row__l">Transfer</span>
-        <span class="row__v">{{ state.needsTransfer === true ? 'Transfer privado' : state.needsTransfer === false ?
-          'Transporte propio' : 'No especificado' }}</span>
+        <span class="row__v">
+          {{ state.needsTransfer === true ? 'Transfer privado' : state.needsTransfer === false ? 'Transporte propio' :
+            'No especificado' }}
+        </span>
       </div>
       <template v-if="state.needsTransfer">
+        <div v-if="selectedVehicle" class="row">
+          <span class="row__l">Vehículo</span>
+          <span class="row__v">{{ selectedVehicle.name }} ({{ selectedVehicle.capacity }}) · ${{
+            selectedVehicle.priceUsd }} / trayecto</span>
+        </div>
         <div class="row"><span class="row__l">Maletas</span><span class="row__v">{{ state.bags }}</span></div>
         <div v-if="state.transferNotes" class="row"><span class="row__l">Notas</span><span class="row__v">{{
           state.transferNotes }}</span></div>
       </template>
     </section>
 
+    <!-- Activities -->
     <section v-if="hasActivities" class="sec">
       <span class="sec__tag">Experiencias</span>
       <template v-for="(day, di) in days" :key="toISOKey(day)">
@@ -90,7 +113,7 @@ function eqName(id: string) { return EQUIPMENT.find(e => e.id === id) }
             <span class="row__v">
               {{ a.participants }} pax · {{ a.preferredTime || 'sin hora' }} ·
               <template v-if="actName(a.id)?.priceType === 'fixed'">${{ (actName(a.id)?.price || 0) * a.participants
-                }}</template>
+              }}</template>
               <template v-else><em class="quote-label">Cotizar</em></template>
             </span>
           </div>
@@ -98,34 +121,60 @@ function eqName(id: string) { return EQUIPMENT.find(e => e.id === id) }
       </template>
     </section>
 
+    <!-- Equipment -->
     <section v-if="state.equipment.length" class="sec">
       <span class="sec__tag">Equipamiento</span>
       <div v-for="eq in state.equipment" :key="eq.id" class="row">
-        <span class="row__l">{{ eqName(eq.id)?.name }} ×{{ eq.quantity }}</span>
-        <span class="row__v">~${{ (eqName(eq.id)?.perDay || 0) * eq.quantity * numDays }}</span>
+        <span class="row__l">{{ eqCatalog(eq.id)?.name }} ×{{ eq.quantity }}</span>
+        <span class="row__v">
+          <template v-if="eqCatalog(eq.id)?.priceType === 'fixed'">
+            ${{ eqCatalog(eq.id)?.pricePerNight }} / noche · ~${{ (eqCatalog(eq.id)?.pricePerNight || 0) * eq.quantity *
+              numDays }}
+          </template>
+          <template v-else><em class="quote-label">Cotizar</em></template>
+        </span>
+      </div>
+      <div class="row">
+        <span class="row__l">Entrega / Devolución</span>
+        <span class="row__v">{{ EQUIPMENT_SCHEDULE.delivery }} / {{ EQUIPMENT_SCHEDULE.returnTime }}</span>
       </div>
     </section>
 
+    <!-- Chef -->
+    <section v-if="selectedChef" class="sec">
+      <span class="sec__tag">Servicio de cocina</span>
+      <div class="row"><span class="row__l">Tipo</span><span class="row__v">{{ selectedChef.name }}</span></div>
+      <div class="row"><span class="row__l">Tarifa</span><span class="row__v">${{ selectedChef.pricePerDay }} / día ·
+          ~${{
+            selectedChef.pricePerDay * numDays }} total</span></div>
+    </section>
+
+    <!-- Grocery -->
     <section v-if="state.wantGrocery" class="sec">
       <span class="sec__tag">Servicio de compras</span>
       <div class="row"><span class="row__l">Estado</span><span class="row__v">Solicitado</span></div>
-      <div v-if="state.groceryNotes" class="row"><span class="row__l">Notas</span><span class="row__v row__v--wrap">{{
-        state.groceryNotes }}</span></div>
+      <div v-if="state.groceryNotes" class="row">
+        <span class="row__l">Notas</span>
+        <span class="row__v row__v--wrap">{{ state.groceryNotes }}</span>
+      </div>
     </section>
 
+    <!-- Allergies -->
     <section v-if="state.allergies" class="sec">
       <span class="sec__tag">Alergias</span>
       <p class="alert-text">{{ state.allergies }}</p>
     </section>
 
+    <!-- Special notes -->
     <section v-if="state.specialNotes" class="sec">
       <span class="sec__tag">Instrucciones especiales</span>
       <p class="note-text">{{ state.specialNotes }}</p>
     </section>
 
+    <!-- CTA -->
     <div class="success-box">
       <p class="success-box__title">Todo listo</p>
-      <p class="success-box__desc">Se generará un documento Word (.docx) con tu itinerario completo</p>
+      <p class="success-box__desc">Se enviará tu itinerario al equipo de concierge</p>
     </div>
   </div>
 </template>

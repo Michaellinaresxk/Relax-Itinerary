@@ -28,7 +28,23 @@ export interface DayMeals {
   [mealTime: string]: string
 }
 
+/* ── Transfer ────────────────────────────── */
+
+export interface TransferVehicle {
+  id: string
+  name: string
+  capacity: string
+  priceUsd: number
+}
+
+/* ── Chef ────────────────────────────────── */
+
+export type ChefTier = 'regular' | 'experienced' | null
+
+/* ── Form state ──────────────────────────── */
+
 export interface FormData {
+  /* Step 1 — Info */
   mainGuest: string
   email: string
   phone: string
@@ -38,19 +54,31 @@ export interface FormData {
   guests: Guest[]
   checkIn: string
   checkOut: string
+
+  /* Step 2 — Travel */
   arrivalFlights: Flight[]
   departureFlights: Flight[]
   needsTransfer: boolean | null
+  transferVehicleId: string
   bags: number
   transferNotes: string
+
+  /* Step 3 — Activities & Equipment */
   dayActivities: Record<string, SelectedActivity[]>
   equipment: SelectedEquipment[]
-  dayMeals: Record<string, DayMeals>
+
+  /* Step 4 — Meals */
+  chefTier: ChefTier
   wantGrocery: boolean | null
   groceryNotes: string
+  dayMeals: Record<string, DayMeals>
   allergies: string
+
+  /* General */
   specialNotes: string
 }
+
+/* ── Catalog types ───────────────────────── */
 
 export interface ActivityCatalogItem {
   id: string
@@ -65,7 +93,16 @@ export interface EquipmentCatalogItem {
   id: string
   name: string
   image: string
-  perDay: number
+  pricePerNight: number | null
+  priceType: 'fixed' | 'quote'
+  note?: string
+}
+
+export interface ChefOption {
+  id: ChefTier
+  name: string
+  pricePerDay: number
+  description: string
 }
 
 export interface StepMeta {

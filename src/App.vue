@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useWizard } from '@/composables/useWizard'
 import { useFormData } from '@/composables/useFormData'
-import { exportAsDocx } from '@/utils/exportData'
+import { submitItinerary, exportAsDocx } from '@/utils/exportData'
 
 import AppHeader from '@/components/layout/AppHeader.vue'
 import ProgressBar from '@/components/layout/ProgressBar.vue'
@@ -30,7 +30,10 @@ const {
 } = useWizard()
 
 const { state } = useFormData()
+
 const isDone = ref(false)
+const isSending = ref(false)
+const sendError = ref('')
 
 const activeComponent = computed(() => stepMap[currentMeta.value.id])
 const cardClass = computed(() => ({
@@ -40,12 +43,32 @@ const cardClass = computed(() => ({
 }))
 
 async function handleSubmit() {
-  await exportAsDocx(state)
-  isDone.value = true
+  isSending.value = true
+  sendError.value = ''
+
+  try {
+    await submitItinerary(state)
+    isDone.value = true
+  } catch (err) {
+    console.error('Submit failed:', err)
+    sendError.value =
+      err instanceof Error ? err.message : 'Error al enviar. Intenta de nuevo.'
+
+    // Fallback: at least download the file locally
+    try {
+      await exportAsDocx(state)
+      sendError.value += ' — Se descargó una copia local como respaldo.'
+    } catch {
+      // If even the download fails, the error message is enough
+    }
+  } finally {
+    isSending.value = false
+  }
 }
 
 function backToReview() {
   isDone.value = false
+  sendError.value = ''
   goToStep(totalSteps - 1)
 }
 </script>
@@ -68,8 +91,14 @@ function backToReview() {
         <component :is="activeComponent" />
       </div>
 
-      <StepNavigation :can-proceed="canProceed" :is-first-step="isFirstStep" :is-last-step="isLastStep" @next="goNext"
-        @back="goBack" @submit="handleSubmit" />
+      <!-- Send error banner -->
+      <div v-if="sendError" class="error-banner">
+        <p>{{ sendError }}</p>
+        <button class="error-banner__close" @click="sendError = ''">Cerrar</button>
+      </div>
+
+      <StepNavigation :can-proceed="canProceed && !isSending" :is-first-step="isFirstStep" :is-last-step="isLastStep"
+        :is-loading="isSending" @next="goNext" @back="goBack" @submit="handleSubmit" />
     </div>
 
     <footer class="footer">
@@ -126,6 +155,40 @@ function backToReview() {
   border-radius: var(--radius-lg);
   padding: 32px 28px;
   border: 1px solid var(--c-border);
+}
+
+.error-banner {
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  background: #fdecea;
+  border: 1px solid #f5c6cb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.error-banner p {
+  font-size: 13px;
+  color: var(--c-red, #B85C5C);
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.error-banner__close {
+  font-size: 11px;
+  color: var(--c-red, #B85C5C);
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 400;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: opacity var(--duration) var(--ease);
+}
+
+.error-banner__close:hover {
+  opacity: 0.6;
 }
 
 .footer {

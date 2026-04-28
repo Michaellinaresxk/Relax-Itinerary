@@ -3,6 +3,7 @@ defineProps<{
   canProceed: boolean
   isFirstStep: boolean
   isLastStep: boolean
+  isLoading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -18,8 +19,15 @@ const emit = defineEmits<{
       Continuar
     </button>
 
-    <button v-else class="nav__main nav__main--accent" @click="emit('submit')">
-      Generar documento
+    <button v-else class="nav__main nav__main--accent" :class="{ 'nav__main--loading': isLoading }"
+      :disabled="isLoading" @click="emit('submit')">
+      <template v-if="isLoading">
+        <span class="nav__spinner" />
+        Enviando...
+      </template>
+      <template v-else>
+        Enviar itinerario
+      </template>
     </button>
 
     <button v-if="!isFirstStep" class="nav__back" @click="emit('back')">
@@ -55,6 +63,10 @@ const emit = defineEmits<{
   text-transform: uppercase;
   cursor: pointer;
   transition: all var(--duration) var(--ease);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .nav__main:hover {
@@ -72,6 +84,26 @@ const emit = defineEmits<{
 
 .nav__main--accent:hover {
   background: var(--c-accent-soft);
+}
+
+.nav__main--loading {
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.nav__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .nav__back {
