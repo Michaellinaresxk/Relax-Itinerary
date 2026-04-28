@@ -15,5 +15,5 @@ export function formatDateLong(date: Date): string {
 }
 
 export function toISOKey(date: Date): string {
-  return date.toISOString().split('T')[0]
+  return date.toISOString().split('T')[0] ?? ''
 }

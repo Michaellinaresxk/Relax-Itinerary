@@ -61,7 +61,8 @@ export function useFormData() {
     state.guests.splice(i, 1)
   }
   function updateGuest(i: number, f: keyof Guest, v: string) {
-    state.guests[i][f] = v
+    const guest = state.guests[i]
+    if (guest) guest[f] = v
   }
 
   /* ── Flights ───────────────────────────── */
@@ -75,13 +76,14 @@ export function useFormData() {
   }
   function updateFlight(type: 'arrival' | 'departure', i: number, f: keyof Flight, v: string) {
     const k = type === 'arrival' ? 'arrivalFlights' : 'departureFlights'
-    state[k][i][f] = v
+    const flight = state[k][i]
+    if (flight) flight[f] = v
   }
 
   /* ── Activities ────────────────────────── */
   function toggleActivity(dayKey: string, actId: string) {
     if (!state.dayActivities[dayKey]) state.dayActivities[dayKey] = []
-    const list = state.dayActivities[dayKey]
+    const list = state.dayActivities[dayKey]!
     const idx = list.findIndex((a) => a.id === actId)
     if (idx >= 0) list.splice(idx, 1)
     else list.push({ id: actId, participants: state.adults, preferredTime: '', notes: '' })
@@ -110,7 +112,7 @@ export function useFormData() {
   /* ── Meals ─────────────────────────────── */
   function updateMeal(dayKey: string, meal: string, value: string) {
     if (!state.dayMeals[dayKey]) state.dayMeals[dayKey] = {}
-    state.dayMeals[dayKey][meal] = value
+    state.dayMeals[dayKey]![meal] = value
   }
 
   function resetForm() {

@@ -20,7 +20,7 @@ export function getDayKeys(checkIn: string, checkOut: string): string[] {
   const result: string[] = []
   const current = new Date(start)
   while (current <= end) {
-    result.push(current.toISOString().split('T')[0])
+    result.push(current.toISOString().split('T')[0] ?? '')
     current.setDate(current.getDate() + 1)
   }
   return result

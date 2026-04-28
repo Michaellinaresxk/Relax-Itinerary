@@ -377,7 +377,7 @@ export function equipmentSection(data: FormData, totalDays: number): Block[] {
     if (!cat) return kvRow('—', '—')
     return kvRow(
       `${cat.name} ×${eq.quantity}`,
-      `$${cat.perDay} / día · ~$${cat.perDay * eq.quantity * totalDays} total`,
+      `$${cat.pricePerNight ?? 0} / día · ~$${(cat.pricePerNight ?? 0) * eq.quantity * totalDays} total`,
     )
   })
 

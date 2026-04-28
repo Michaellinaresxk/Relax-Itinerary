@@ -64,7 +64,8 @@ function blobToBase64(blob: Blob): Promise<string> {
     reader.onload = () => {
       const result = reader.result as string
       // Strip the data:...;base64, prefix — Resend expects raw base64
-      resolve(result.split(',')[1])
+      const base64 = result.split(',')[1]
+      resolve(base64 ?? '')
     }
     reader.onerror = () => reject(new Error('Failed to read blob'))
     reader.readAsDataURL(blob)
