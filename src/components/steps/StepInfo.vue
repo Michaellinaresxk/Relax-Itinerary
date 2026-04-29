@@ -2,6 +2,7 @@
 import FormField from '@/components/ui/FormField.vue'
 import Accordion from '@/components/ui/Accordion.vue'
 import { useFormData } from '@/composables/useFormData'
+import { useValidation } from '@/composables/useValidation'
 import { computed } from 'vue'
 
 const {
@@ -9,50 +10,58 @@ const {
   addGuest, removeGuest, updateGuest,
 } = useFormData()
 
+const { touch, fieldError } = useValidation()
+
 const groupLabel = computed(() => {
   const parts = [`${state.adults} adultos`]
   if (state.children > 0) parts.push(`${state.children} niños`)
   return parts.join(', ')
 })
+
+/** Wrapper that touches + updates in one call */
+function onUpdate<K extends keyof typeof state>(field: K, value: (typeof state)[K]) {
+  touch(field as string)
+  updateField(field, value)
+}
 </script>
 
 <template>
   <div>
     <div class="section-label">Datos de contacto</div>
 
-    <FormField label="Nombre del huésped principal" required>
-      <input class="inp" :value="state.mainGuest" placeholder="Nombre completo"
-        @input="updateField('mainGuest', ($event.target as HTMLInputElement).value)" />
+    <FormField label="Nombre del huésped principal" required :error="fieldError('mainGuest')">
+      <input class="inp" :value="state.mainGuest" placeholder="Nombre completo" @blur="touch('mainGuest')"
+        @input="onUpdate('mainGuest', ($event.target as HTMLInputElement).value)" />
     </FormField>
 
     <div class="grid-2">
-      <FormField label="Email" required>
-        <input class="inp" type="email" :value="state.email" placeholder="tu@email.com"
-          @input="updateField('email', ($event.target as HTMLInputElement).value)" />
+      <FormField label="Email" required :error="fieldError('email')">
+        <input class="inp" type="email" :value="state.email" placeholder="tu@email.com" @blur="touch('email')"
+          @input="onUpdate('email', ($event.target as HTMLInputElement).value)" />
       </FormField>
-      <FormField label="Teléfono / WhatsApp" required>
-        <input class="inp" :value="state.phone" placeholder="+1 (555) 000-0000"
-          @input="updateField('phone', ($event.target as HTMLInputElement).value)" />
+      <FormField label="Teléfono / WhatsApp" required :error="fieldError('phone')">
+        <input class="inp" :value="state.phone" placeholder="+1 (555) 000-0000" @blur="touch('phone')"
+          @input="onUpdate('phone', ($event.target as HTMLInputElement).value)" />
       </FormField>
     </div>
 
     <div class="section-label">Estancia</div>
 
     <div class="grid-2">
-      <FormField label="Check-in" required>
-        <input class="inp" type="date" :value="state.checkIn"
-          @input="updateField('checkIn', ($event.target as HTMLInputElement).value)" />
+      <FormField label="Check-in" required :error="fieldError('checkIn')">
+        <input class="inp" type="date" :value="state.checkIn" @blur="touch('checkIn')"
+          @input="onUpdate('checkIn', ($event.target as HTMLInputElement).value)" />
       </FormField>
-      <FormField label="Check-out" required>
-        <input class="inp" type="date" :value="state.checkOut"
-          @input="updateField('checkOut', ($event.target as HTMLInputElement).value)" />
+      <FormField label="Check-out" required :error="fieldError('checkOut')">
+        <input class="inp" type="date" :value="state.checkOut" :min="state.checkIn || undefined"
+          @blur="touch('checkOut')" @input="onUpdate('checkOut', ($event.target as HTMLInputElement).value)" />
       </FormField>
     </div>
 
     <div class="grid-2">
       <FormField label="Adultos" required>
         <input class="inp inp--center" type="number" min="1" :value="state.adults"
-          @input="updateField('adults', Math.max(1, parseInt(($event.target as HTMLInputElement).value) || 1))" />
+          @input="onUpdate('adults', Math.max(1, parseInt(($event.target as HTMLInputElement).value) || 1))" />
       </FormField>
       <FormField label="Niños (0-17)">
         <input class="inp inp--center" type="number" min="0" :value="state.children"
@@ -89,7 +98,7 @@ const groupLabel = computed(() => {
       <FormField label="Notas especiales" hint="Cumpleaños, sorpresas, solicitudes especiales">
         <textarea class="inp" style="min-height:56px" :value="state.specialNotes"
           placeholder="Ej: Celebramos el aniversario de María el día 2."
-          @input="updateField('specialNotes', ($event.target as HTMLTextAreaElement).value)" />
+          @input="onUpdate('specialNotes', ($event.target as HTMLTextAreaElement).value)" />
       </FormField>
     </Accordion>
   </div>

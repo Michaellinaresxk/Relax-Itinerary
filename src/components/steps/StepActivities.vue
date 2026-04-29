@@ -85,6 +85,9 @@ function eqTotalDisplay(eq: typeof EQUIPMENT[number]): string {
                 <span v-else class="act-card__price act-card__price--quote">
                   Cotizar
                 </span>
+                <span v-if="act.scheduleType === 'fixed'" class="act-card__schedule-badge">
+                  Horario fijo
+                </span>
               </div>
               <div v-if="isActSelected(act.id)" class="act-card__check">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -102,9 +105,15 @@ function eqTotalDisplay(eq: typeof EQUIPMENT[number]): string {
                     @input="updateActivity(activeDayKey, act.id, 'participants', parseInt(($event.target as HTMLInputElement).value) || 1)" />
                 </div>
                 <div class="detail-field">
-                  <span class="detail-label">Hora preferida</span>
-                  <input class="inp inp--sm" type="time" :value="getActDetail(act.id)?.preferredTime"
-                    @input="updateActivity(activeDayKey, act.id, 'preferredTime', ($event.target as HTMLInputElement).value)" />
+                  <template v-if="act.scheduleType === 'fixed'">
+                    <span class="detail-label">Horario del proveedor</span>
+                    <span class="fixed-schedule">{{ act.fixedSchedule }}</span>
+                  </template>
+                  <template v-else>
+                    <span class="detail-label">Hora preferida</span>
+                    <input class="inp inp--sm" type="time" :value="getActDetail(act.id)?.preferredTime"
+                      @input="updateActivity(activeDayKey, act.id, 'preferredTime', ($event.target as HTMLInputElement).value)" />
+                  </template>
                 </div>
               </div>
             </div>
@@ -320,6 +329,27 @@ function eqTotalDisplay(eq: typeof EQUIPMENT[number]): string {
   color: #F0D4B8;
   font-style: italic;
   opacity: 1;
+}
+
+.act-card__schedule-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 3px;
+}
+
+.fixed-schedule {
+  font-size: 12px;
+  color: var(--c-warm);
+  font-weight: 400;
+  font-style: italic;
+  padding: 8px 0;
+  line-height: 1.4;
 }
 
 .act-card__check {

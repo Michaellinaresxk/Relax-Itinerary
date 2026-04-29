@@ -24,7 +24,7 @@ const initial = (): FormData => ({
   departureFlights: [emptyFlight()],
   needsTransfer: null,
   transferVehicleId: '',
-  bags: 0,
+  passengers: 0,
   transferNotes: '',
   dayActivities: {},
   equipment: [],

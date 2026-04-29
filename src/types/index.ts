@@ -34,6 +34,7 @@ export interface TransferVehicle {
   id: string
   name: string
   capacity: string
+  maxPassengers: number
   priceUsd: number
 }
 
@@ -60,7 +61,7 @@ export interface FormData {
   departureFlights: Flight[]
   needsTransfer: boolean | null
   transferVehicleId: string
-  bags: number
+  passengers: number
   transferNotes: string
 
   /* Step 3 — Activities & Equipment */
@@ -80,6 +81,8 @@ export interface FormData {
 
 /* ── Catalog types ───────────────────────── */
 
+export type ActivityScheduleType = 'flexible' | 'fixed'
+
 export interface ActivityCatalogItem {
   id: string
   name: string
@@ -87,6 +90,10 @@ export interface ActivityCatalogItem {
   price: number | null
   unit: string
   priceType: 'fixed' | 'quote'
+  /** 'flexible' = client picks time; 'fixed' = provider sets time */
+  scheduleType: ActivityScheduleType
+  /** For fixed-schedule activities, the set time(s) */
+  fixedSchedule?: string
 }
 
 export interface EquipmentCatalogItem {
