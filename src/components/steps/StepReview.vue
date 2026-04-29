@@ -72,7 +72,7 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
         <div class="row">
           <span class="row__l">Salida {{ i + 1 }}</span>
           <span class="row__v">{{ f.airline }} {{ f.code }} · {{ f.date }} {{ f.time }} · hacia {{ f.destination
-          }}</span>
+            }}</span>
         </div>
       </template>
       <p v-if="!state.arrivalFlights.some(f => f.code) && !state.departureFlights.some(f => f.code)" class="empty-hint">
@@ -96,7 +96,10 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
           <span class="row__v">{{ selectedVehicle.name }} ({{ selectedVehicle.capacity }}) · ${{
             selectedVehicle.priceUsd }} / trayecto</span>
         </div>
-        <div class="row"><span class="row__l">Maletas</span><span class="row__v">{{ state.bags }}</span></div>
+        <div class="row"><span class="row__l">Pasajeros</span><span class="row__v">{{ state.passengers }}</span></div>
+        <div v-if="selectedVehicle && state.passengers > selectedVehicle.maxPassengers" class="capacity-warn">
+          El vehículo seleccionado no tiene capacidad suficiente para {{ state.passengers }} personas.
+        </div>
         <div v-if="state.transferNotes" class="row"><span class="row__l">Notas</span><span class="row__v">{{
           state.transferNotes }}</span></div>
       </template>
@@ -111,9 +114,16 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
           <div v-for="a in state.dayActivities[toISOKey(day)]" :key="a.id" class="row">
             <span class="row__l">{{ actName(a.id)?.name }}</span>
             <span class="row__v">
-              {{ a.participants }} pax · {{ a.preferredTime || 'sin hora' }} ·
+              {{ a.participants }} pax ·
+              <template v-if="actName(a.id)?.scheduleType === 'fixed'">
+                <em class="schedule-tag">{{ actName(a.id)?.fixedSchedule }}</em>
+              </template>
+              <template v-else>
+                {{ a.preferredTime || 'sin hora' }}
+              </template>
+              ·
               <template v-if="actName(a.id)?.priceType === 'fixed'">${{ (actName(a.id)?.price || 0) * a.participants
-              }}</template>
+                }}</template>
               <template v-else><em class="quote-label">Cotizar</em></template>
             </span>
           </div>
@@ -174,7 +184,10 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
     <!-- CTA -->
     <div class="success-box">
       <p class="success-box__title">Todo listo</p>
-      <p class="success-box__desc">Se enviará tu itinerario al equipo de concierge</p>
+      <p class="success-box__desc">
+        Al enviar, tu concierge recibirá esta información para confirmar
+        disponibilidad, precios finales y preparar tu itinerario en PDF.
+      </p>
     </div>
   </div>
 </template>
@@ -237,6 +250,23 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
 .quote-label {
   color: var(--c-warm);
   font-style: italic;
+}
+
+.schedule-tag {
+  color: var(--c-warm);
+  font-style: italic;
+  font-size: 12px;
+}
+
+.capacity-warn {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: #FFF3ED;
+  border: 1px solid #F0D4B4;
+  font-size: 12px;
+  color: #8B6914;
+  font-weight: 300;
+  margin: 4px 0;
 }
 
 .empty-hint {

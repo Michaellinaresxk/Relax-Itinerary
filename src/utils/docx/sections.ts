@@ -297,9 +297,8 @@ export function transferSection(data: FormData): Block[] {
       kvRow('Fecha y hora', '(confirmar con vuelo de llegada)', true),
       kvRow(
         'Pasajeros',
-        `${data.adults + data.children} (${data.adults} adultos${data.children > 0 ? `, ${data.children} niños` : ''})`,
+        `${data.passengers || data.adults + data.children} (${data.adults} adultos${data.children > 0 ? `, ${data.children} niños` : ''})`,
       ),
-      kvRow('Maletas', String(data.bags || '—')),
       ...(data.transferNotes ? [kvRow('Notas especiales', data.transferNotes)] : []),
     ]
     blocks.push(subHeading('Servicios de transfer confirmados'), kvTable(rows))

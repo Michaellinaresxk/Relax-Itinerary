@@ -14,11 +14,26 @@ defineEmits<{ backToReview: [] }>()
       <div class="done__line" />
       <h1 class="done__title">Gracias, {{ firstName }}</h1>
       <p class="done__text">
-        Tu itinerario fue enviado al equipo de concierge y también
-        se descargó como documento Word (.docx) en tu dispositivo.<br /><br />
-        Nuestro equipo revisará tu información, completará los detalles
-        pendientes y te enviará el itinerario final por correo.
+        Tu información fue enviada correctamente al equipo de concierge.<br /><br />
+        Un miembro del equipo revisará tus preferencias, confirmará
+        disponibilidad y precios finales, y te enviará el itinerario
+        completo en formato PDF por correo electrónico.
       </p>
+
+      <div class="done__steps">
+        <div class="done__step">
+          <span class="done__step-num">1</span>
+          <span>Tu solicitud fue recibida</span>
+        </div>
+        <div class="done__step done__step--pending">
+          <span class="done__step-num">2</span>
+          <span>El concierge confirma detalles y precios</span>
+        </div>
+        <div class="done__step done__step--pending">
+          <span class="done__step-num">3</span>
+          <span>Recibirás el itinerario final por email</span>
+        </div>
+      </div>
 
       <div class="done__contact">
         <p>info@relaxinnhomes.com</p>
@@ -79,6 +94,46 @@ defineEmits<{ backToReview: [] }>()
   margin-bottom: 32px;
   line-height: 1.8;
   font-weight: 300;
+}
+
+.done__steps {
+  text-align: left;
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.done__step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--c-deep);
+  font-weight: 300;
+}
+
+.done__step--pending {
+  color: var(--c-soft);
+}
+
+.done__step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+  background: var(--c-accent);
+  color: var(--c-white);
+}
+
+.done__step--pending .done__step-num {
+  background: var(--c-border);
+  color: var(--c-soft);
 }
 
 .done__btn {

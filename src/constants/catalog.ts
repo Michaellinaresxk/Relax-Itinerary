@@ -32,11 +32,17 @@ export const STEPS: StepMeta[] = [
    Cash rates — taxes apply if paying by credit card
    ═══════════════════════════════════════════════════════════════ */
 export const TRANSFER_VEHICLES: TransferVehicle[] = [
-  { id: 'van_small', name: 'Van', capacity: '1–6 personas', priceUsd: 40 },
-  { id: 'van_medium', name: 'Van', capacity: '7–10 personas', priceUsd: 65 },
-  { id: 'van_large', name: 'Van', capacity: '11–16 personas', priceUsd: 75 },
-  { id: 'suv', name: 'SUV', capacity: 'Hasta 6 personas', priceUsd: 80 },
-  { id: 'sprinter', name: 'Mercedes Sprinter', capacity: 'Hasta 16 personas', priceUsd: 100 },
+  { id: 'van_small', name: 'Van', capacity: '1–6 personas', maxPassengers: 6, priceUsd: 40 },
+  { id: 'van_medium', name: 'Van', capacity: '7–10 personas', maxPassengers: 10, priceUsd: 65 },
+  { id: 'van_large', name: 'Van', capacity: '11–16 personas', maxPassengers: 16, priceUsd: 75 },
+  { id: 'suv', name: 'SUV', capacity: 'Hasta 6 personas', maxPassengers: 6, priceUsd: 80 },
+  {
+    id: 'sprinter',
+    name: 'Mercedes Sprinter',
+    capacity: 'Hasta 16 personas',
+    maxPassengers: 16,
+    priceUsd: 100,
+  },
 ]
 
 /* ═══════════════════════════════════════════════════════════════
@@ -63,6 +69,8 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'grupo',
         priceType: 'quote',
+        scheduleType: 'fixed',
+        fixedSchedule: '9:00 AM o 2:00 PM',
       },
       {
         id: 'yacht',
@@ -71,6 +79,7 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'grupo',
         priceType: 'quote',
+        scheduleType: 'flexible',
       },
       {
         id: 'fishing',
@@ -79,6 +88,8 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'grupo',
         priceType: 'quote',
+        scheduleType: 'fixed',
+        fixedSchedule: '6:00 AM o 1:00 PM',
       },
     ],
   },
@@ -94,6 +105,8 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'persona',
         priceType: 'quote',
+        scheduleType: 'fixed',
+        fixedSchedule: '9:00 AM o 3:00 PM',
       },
       {
         id: 'excursions',
@@ -102,6 +115,7 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'persona',
         priceType: 'quote',
+        scheduleType: 'flexible',
       },
       {
         id: 'golf_tee',
@@ -110,6 +124,8 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'persona',
         priceType: 'quote',
+        scheduleType: 'fixed',
+        fixedSchedule: 'Sujeto a disponibilidad del campo',
       },
     ],
   },
@@ -125,6 +141,7 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'persona',
         priceType: 'quote',
+        scheduleType: 'flexible',
       },
       {
         id: 'training',
@@ -133,6 +150,7 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'sesión',
         priceType: 'quote',
+        scheduleType: 'flexible',
       },
     ],
   },
@@ -148,6 +166,7 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'evento',
         priceType: 'quote',
+        scheduleType: 'flexible',
       },
       {
         id: 'live_music',
@@ -156,6 +175,7 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'evento',
         priceType: 'quote',
+        scheduleType: 'flexible',
       },
       {
         id: 'decoration',
@@ -164,6 +184,7 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'evento',
         priceType: 'quote',
+        scheduleType: 'flexible',
       },
     ],
   },
@@ -179,6 +200,7 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'día',
         priceType: 'quote',
+        scheduleType: 'flexible',
       },
       {
         id: 'cleaning',
@@ -187,6 +209,7 @@ export const ACTIVITY_CATEGORIES: ActivityCategory[] = [
         price: null,
         unit: 'servicio',
         priceType: 'quote',
+        scheduleType: 'flexible',
       },
     ],
   },

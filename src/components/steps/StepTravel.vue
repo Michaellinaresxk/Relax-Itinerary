@@ -6,7 +6,7 @@ import Accordion from '@/components/ui/Accordion.vue'
 import { useFormData } from '@/composables/useFormData'
 import { TRANSFER_VEHICLES, CASH_RATE_NOTE } from '@/constants/catalog'
 import type { Flight } from '@/types'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 
 const { state, addFlight, removeFlight, updateFlight, updateField } = useFormData()
 
@@ -16,9 +16,50 @@ function onUpdateDep(i: number, f: keyof Flight, v: string) { updateFlight('depa
 const arrCount = computed(() => state.arrivalFlights.filter(f => f.code).length)
 const depCount = computed(() => state.departureFlights.filter(f => f.code).length)
 
+const totalGroupSize = computed(() => state.adults + state.children)
+
+// Auto-set passengers from group size when transfer is first enabled
+watch(() => state.needsTransfer, (val) => {
+  if (val === true && state.passengers === 0) {
+    state.passengers = totalGroupSize.value
+  }
+})
+
 const selectedVehicle = computed(() =>
   TRANSFER_VEHICLES.find(v => v.id === state.transferVehicleId),
 )
+
+/** Smart suggestion when selected vehicle can't fit all passengers */
+const vehicleWarning = computed<string | null>(() => {
+  if (!selectedVehicle.value || state.passengers <= 0) return null
+
+  const pax = state.passengers
+  const max = selectedVehicle.value.maxPassengers
+
+  if (pax <= max) return null
+
+  // Find the cheapest vehicle that fits
+  const fits = TRANSFER_VEHICLES
+    .filter(v => v.maxPassengers >= pax)
+    .sort((a, b) => a.priceUsd - b.priceUsd)
+
+  if (fits.length > 0) {
+    const rec = fits[0]!
+    return `El ${selectedVehicle.value.name} tiene capacidad para ${max} personas, pero tu grupo es de ${pax}. Te recomendamos: ${rec.name} (${rec.capacity}) — $${rec.priceUsd} / trayecto.`
+  }
+
+  // No single vehicle fits — suggest 2 vehicles
+  const best = TRANSFER_VEHICLES
+    .filter(v => v.maxPassengers >= Math.ceil(pax / 2))
+    .sort((a, b) => a.priceUsd - b.priceUsd)
+
+  if (best.length > 0) {
+    const rec = best[0]!
+    return `Tu grupo de ${pax} personas no cabe en un solo ${selectedVehicle.value.name} (máx. ${max}). Considera 2× ${rec.name} — $${rec.priceUsd * 2} total / trayecto.`
+  }
+
+  return `Tu grupo de ${pax} personas excede la capacidad del ${selectedVehicle.value.name} (máx. ${max}). Contacta a tu concierge para opciones.`
+})
 </script>
 
 <template>
@@ -51,10 +92,19 @@ const selectedVehicle = computed(() =>
     <template v-if="state.needsTransfer">
       <p class="hint">Selecciona el tipo de vehículo. Tarifas por trayecto.</p>
 
+      <div class="passenger-info">
+        <span class="passenger-info__label">Grupo total</span>
+        <span class="passenger-info__count">{{ totalGroupSize }} personas</span>
+        <span class="passenger-info__detail">
+          ({{ state.adults }} adultos{{ state.children > 0 ? `, ${state.children} niños` : '' }})
+        </span>
+      </div>
+
       <div class="vehicle-list">
-        <div v-for="v in TRANSFER_VEHICLES" :key="v.id" class="vehicle"
-          :class="{ 'vehicle--selected': state.transferVehicleId === v.id }"
-          @click="updateField('transferVehicleId', v.id)">
+        <div v-for="v in TRANSFER_VEHICLES" :key="v.id" class="vehicle" :class="{
+          'vehicle--selected': state.transferVehicleId === v.id,
+          'vehicle--over': state.passengers > v.maxPassengers,
+        }" @click="updateField('transferVehicleId', v.id)">
           <div class="vehicle__info">
             <span class="vehicle__name">{{ v.name }}</span>
             <span class="vehicle__cap">{{ v.capacity }}</span>
@@ -63,12 +113,22 @@ const selectedVehicle = computed(() =>
         </div>
       </div>
 
+      <!-- Smart vehicle suggestion -->
+      <div v-if="vehicleWarning" class="vehicle-warn">
+        <svg class="vehicle-warn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <p>{{ vehicleWarning }}</p>
+      </div>
+
       <p class="cash-note">{{ CASH_RATE_NOTE }}</p>
 
       <div class="grid-2">
-        <FormField label="Cantidad de maletas">
-          <input class="inp inp--center" type="number" min="0" :value="state.bags"
-            @input="updateField('bags', Math.max(0, parseInt(($event.target as HTMLInputElement).value) || 0))" />
+        <FormField label="Pasajeros" hint="Cantidad total de personas que viajan">
+          <input class="inp inp--center" type="number" min="1" :value="state.passengers"
+            @input="updateField('passengers', Math.max(1, parseInt(($event.target as HTMLInputElement).value) || 1))" />
         </FormField>
         <FormField label="Solicitudes especiales" hint="Car seat, silla de ruedas, etc.">
           <input class="inp" :value="state.transferNotes" placeholder="Ej: car seat para bebé de 2 años"
@@ -137,6 +197,65 @@ const selectedVehicle = computed(() =>
 .vehicle--selected {
   border-color: var(--c-accent-soft);
   background: var(--c-accent-whisper);
+}
+
+.vehicle--over:not(.vehicle--selected) {
+  opacity: 0.5;
+}
+
+.passenger-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--c-bg);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.passenger-info__label {
+  font-size: 11px;
+  color: var(--c-hint);
+  font-weight: 300;
+}
+
+.passenger-info__count {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--c-deep);
+}
+
+.passenger-info__detail {
+  font-size: 11px;
+  color: var(--c-soft);
+  font-weight: 300;
+}
+
+.vehicle-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--c-warm-bg, #FFF8F0);
+  border: 1px solid var(--c-warm-border, #F0D4B4);
+  margin: 12px 0;
+}
+
+.vehicle-warn__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--c-warm, #D4A574);
+  margin-top: 1px;
+}
+
+.vehicle-warn p {
+  font-size: 12px;
+  color: var(--c-warm-text, #8B6914);
+  font-weight: 300;
+  line-height: 1.5;
 }
 
 .vehicle__info {
