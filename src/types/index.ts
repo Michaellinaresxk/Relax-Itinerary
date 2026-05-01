@@ -1,7 +1,51 @@
+/* ── Identity Document Types ─────────────── */
+
+export type IdType = 'passport' | 'cedula' | 'license' | ''
+
+export const ID_TYPE_LABELS: Record<Exclude<IdType, ''>, string> = {
+  passport: 'Pasaporte',
+  cedula: 'Cédula',
+  license: 'Licencia',
+}
+
+/* ── Trip Motive ─────────────────────────── */
+
+export type TripMotive =
+  | 'celebration'
+  | 'relax'
+  | 'adventure'
+  | 'anniversary'
+  | 'birthday'
+  | 'honeymoon'
+  | 'family'
+  | 'corporate'
+  | 'other'
+  | ''
+
+export const TRIP_MOTIVE_OPTIONS: { id: TripMotive; label: string; icon: string }[] = [
+  { id: 'relax', label: 'Relax', icon: '🌴' },
+  { id: 'celebration', label: 'Celebración', icon: '🎉' },
+  { id: 'anniversary', label: 'Aniversario', icon: '💍' },
+  { id: 'birthday', label: 'Cumpleaños', icon: '🎂' },
+  { id: 'honeymoon', label: 'Luna de Miel', icon: '🥂' },
+  { id: 'adventure', label: 'Aventura', icon: '🏄' },
+  { id: 'family', label: 'Vacaciones Familiares', icon: '👨‍👩‍👧‍👦' },
+  { id: 'corporate', label: 'Corporativo', icon: '💼' },
+  { id: 'other', label: 'Otro', icon: '✨' },
+]
+
+/* ── Guest ────────────────────────────────── */
+
 export interface Guest {
   name: string
   relation: string
+  idType: IdType
+  idNumber: string
+  /** Stored filename of the uploaded ID photo */
+  idPhotoName: string
 }
+
+/* ── Flight ───────────────────────────────── */
 
 export interface Flight {
   airline: string
@@ -11,6 +55,8 @@ export interface Flight {
   origin: string
   destination: string
 }
+
+/* ── Activities ──────────────────────────── */
 
 export interface SelectedActivity {
   id: string
@@ -49,12 +95,19 @@ export interface FormData {
   mainGuest: string
   email: string
   phone: string
+  mainGuestIdType: IdType
+  mainGuestIdNumber: string
+  mainGuestIdPhotoName: string
+
   adults: number
   children: number
   childAges: string[]
   guests: Guest[]
   checkIn: string
   checkOut: string
+
+  tripMotive: TripMotive
+  tripMotiveDetail: string
 
   /* Step 2 — Travel */
   arrivalFlights: Flight[]
@@ -90,9 +143,7 @@ export interface ActivityCatalogItem {
   price: number | null
   unit: string
   priceType: 'fixed' | 'quote'
-  /** 'flexible' = client picks time; 'fixed' = provider sets time */
   scheduleType: ActivityScheduleType
-  /** For fixed-schedule activities, the set time(s) */
   fixedSchedule?: string
 }
 
