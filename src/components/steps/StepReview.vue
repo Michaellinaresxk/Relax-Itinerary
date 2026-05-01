@@ -6,9 +6,10 @@ import {
   ALL_ACTIVITIES, EQUIPMENT, TRANSFER_VEHICLES,
   CHEF_OPTIONS, EQUIPMENT_SCHEDULE,
 } from '@/constants/catalog'
+import { ID_TYPE_LABELS, TRIP_MOTIVE_OPTIONS } from '@/types'
 import { formatDateShort, toISOKey } from '@/utils/dates'
 
-const { state } = useFormData()
+const { state, adultsCount } = useFormData()
 const { days, numDays } = useDays()
 
 const filledGuests = computed(() => state.guests.filter(g => g.name.trim()))
@@ -25,8 +26,16 @@ const selectedChef = computed(() =>
   CHEF_OPTIONS.find(c => c.id === state.chefTier),
 )
 
+const tripMotiveLabel = computed(() =>
+  TRIP_MOTIVE_OPTIONS.find(o => o.id === state.tripMotive)?.label ?? '',
+)
+
 function actName(id: string) { return ALL_ACTIVITIES.find(a => a.id === id) }
 function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
+
+function idLabel(type: string): string {
+  return ID_TYPE_LABELS[type as keyof typeof ID_TYPE_LABELS] ?? type
+}
 </script>
 
 <template>
@@ -37,25 +46,60 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
       <div class="row"><span class="row__l">Nombre</span><span class="row__v">{{ state.mainGuest }}</span></div>
       <div class="row"><span class="row__l">Email</span><span class="row__v">{{ state.email }}</span></div>
       <div class="row"><span class="row__l">Teléfono</span><span class="row__v">{{ state.phone }}</span></div>
+
+      <!-- Main guest ID -->
+      <template v-if="state.mainGuestIdType">
+        <div class="row">
+          <span class="row__l">{{ idLabel(state.mainGuestIdType) }}</span>
+          <span class="row__v">
+            {{ state.mainGuestIdNumber || '—' }}
+            <span v-if="state.mainGuestIdPhotoName" class="doc-badge">Foto adjunta</span>
+          </span>
+        </div>
+      </template>
+
       <div class="row">
         <span class="row__l">Grupo</span>
         <span class="row__v">
-          {{ state.adults }} adultos<template v-if="state.children > 0">, {{ state.children }} niños ({{
+          {{ adultsCount }} adultos<template v-if="state.children > 0">, {{ state.children }} niños ({{
             state.childAges.join(', ') }} años)</template>
         </span>
       </div>
+
       <div v-if="state.checkIn && state.checkOut" class="row">
         <span class="row__l">Estancia</span>
         <span class="row__v">{{ state.checkIn }} — {{ state.checkOut }} ({{ days.length }} noches)</span>
       </div>
     </section>
 
+    <!-- Trip motive -->
+    <section v-if="tripMotiveLabel" class="sec">
+      <span class="sec__tag">Motivo del viaje</span>
+      <div class="row">
+        <span class="row__l">Tipo</span>
+        <span class="row__v">{{ tripMotiveLabel }}</span>
+      </div>
+      <div v-if="state.tripMotiveDetail" class="row">
+        <span class="row__l">Detalles</span>
+        <span class="row__v row__v--wrap">{{ state.tripMotiveDetail }}</span>
+      </div>
+    </section>
+
     <!-- Guests list -->
     <section v-if="filledGuests.length" class="sec">
-      <span class="sec__tag">Invitados</span>
-      <div v-for="(g, i) in filledGuests" :key="i" class="row">
-        <span class="row__l">#{{ i + 1 }}</span>
-        <span class="row__v">{{ g.name }}<template v-if="g.relation"> · {{ g.relation }}</template></span>
+      <span class="sec__tag">Invitados ({{ filledGuests.length }})</span>
+      <div v-for="(g, i) in filledGuests" :key="i" class="guest-review">
+        <div class="row">
+          <span class="row__l">#{{ i + 1 }}</span>
+          <span class="row__v">{{ g.name }}<template v-if="g.relation"> · {{ g.relation }}</template></span>
+        </div>
+        <div v-if="g.idType" class="row row--sub">
+          <span class="row__l">{{ idLabel(g.idType) }}</span>
+          <span class="row__v">
+            {{ g.idNumber || '—' }}
+            <span v-if="g.idPhotoName" class="doc-badge">Foto adjunta</span>
+          </span>
+        </div>
       </div>
     </section>
 
@@ -72,7 +116,7 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
         <div class="row">
           <span class="row__l">Salida {{ i + 1 }}</span>
           <span class="row__v">{{ f.airline }} {{ f.code }} · {{ f.date }} {{ f.time }} · hacia {{ f.destination
-            }}</span>
+          }}</span>
         </div>
       </template>
       <p v-if="!state.arrivalFlights.some(f => f.code) && !state.departureFlights.some(f => f.code)" class="empty-hint">
@@ -123,7 +167,7 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
               </template>
               ·
               <template v-if="actName(a.id)?.priceType === 'fixed'">${{ (actName(a.id)?.price || 0) * a.participants
-                }}</template>
+              }}</template>
               <template v-else><em class="quote-label">Cotizar</em></template>
             </span>
           </div>
@@ -223,6 +267,11 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
   border-bottom: none;
 }
 
+.row--sub {
+  padding-left: 16px;
+  font-size: 12px;
+}
+
 .row__l {
   color: var(--c-soft);
   flex-shrink: 0;
@@ -232,11 +281,33 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
 .row__v {
   font-weight: 400;
   text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .row__v--wrap {
   white-space: normal;
   max-width: 60%;
+}
+
+.doc-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: var(--c-accent-whisper);
+  color: var(--c-accent);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--c-accent-soft);
+}
+
+.guest-review {
+  margin-bottom: 4px;
 }
 
 .day-sub {
@@ -320,10 +391,15 @@ function eqCatalog(id: string) { return EQUIPMENT.find(e => e.id === id) }
 
   .row__v {
     text-align: left;
+    justify-content: flex-start;
   }
 
   .row__v--wrap {
     max-width: 100%;
+  }
+
+  .row--sub {
+    padding-left: 8px;
   }
 }
 </style>
