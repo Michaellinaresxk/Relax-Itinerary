@@ -52,8 +52,11 @@ export interface Flight {
   code: string
   date: string
   time: string
-  origin: string
-  destination: string
+  passengers: number
+  destination: string // departure flights only
+  needsTransfer: boolean | null
+  transferVehicleId: string
+  transferNotes: string
 }
 
 /* ── Activities ──────────────────────────── */
@@ -109,13 +112,9 @@ export interface FormData {
   tripMotive: TripMotive
   tripMotiveDetail: string
 
-  /* Step 2 — Travel */
+  /* Step 2 — Travel (transport is per-flight, see Flight interface) */
   arrivalFlights: Flight[]
   departureFlights: Flight[]
-  needsTransfer: boolean | null
-  transferVehicleId: string
-  passengers: number
-  transferNotes: string
 
   /* Step 3 — Activities & Equipment */
   dayActivities: Record<string, SelectedActivity[]>
