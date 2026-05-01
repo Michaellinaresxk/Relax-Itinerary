@@ -13,8 +13,11 @@ const emptyFlight = (): Flight => ({
   code: '',
   date: '',
   time: '',
-  origin: '',
+  passengers: 0,
   destination: '',
+  needsTransfer: null,
+  transferVehicleId: '',
+  transferNotes: '',
 })
 
 const emptyGuest = (): Guest => ({
@@ -45,10 +48,6 @@ const initial = (): FormData => ({
 
   arrivalFlights: [emptyFlight()],
   departureFlights: [emptyFlight()],
-  needsTransfer: null,
-  transferVehicleId: '',
-  passengers: 0,
-  transferNotes: '',
   dayActivities: {},
   equipment: [],
   chefTier: null,
@@ -159,10 +158,15 @@ export function useFormData() {
     if (state[k].length > 1) state[k].splice(i, 1)
   }
 
-  function updateFlight(type: 'arrival' | 'departure', i: number, f: keyof Flight, v: string) {
+  function updateFlight(
+    type: 'arrival' | 'departure',
+    i: number,
+    f: keyof Flight,
+    v: string | number | boolean | null,
+  ) {
     const k = type === 'arrival' ? 'arrivalFlights' : 'departureFlights'
     const flight = state[k][i]
-    if (flight) flight[f] = v
+    if (flight) (flight as any)[f] = v
   }
 
   /* ── Activities ────────────────────────── */

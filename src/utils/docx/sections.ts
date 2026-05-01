@@ -9,7 +9,7 @@ import {
   ExternalHyperlink,
 } from 'docx'
 import type { FormData } from '@/types'
-import { ALL_ACTIVITIES, EQUIPMENT, MEAL_TIMES } from '@/constants/catalog'
+import { ALL_ACTIVITIES, EQUIPMENT, MEAL_TIMES, TRANSFER_VEHICLES } from '@/constants/catalog'
 import { BRAND, FONT } from './tokes'
 import {
   bodyText,
@@ -199,7 +199,7 @@ export function flightsSection(data: FormData): Block[] {
         kvTable([
           kvRow(`Vuelo ${i + 1}`, `${f.airline} ${f.code}`),
           kvRow('Fecha / Hora', `${f.date ? formatDate(f.date) : '—'} · ${f.time || '—'}`),
-          kvRow('Origen', f.origin || '—'),
+          kvRow('Pasajeros', `${f.passengers || '—'}`),
         ]),
         spacer(80),
       )
@@ -222,6 +222,7 @@ export function flightsSection(data: FormData): Block[] {
           kvRow(`Vuelo ${i + 1}`, `${f.airline} ${f.code}`),
           kvRow('Fecha / Hora', `${f.date ? formatDate(f.date) : '—'} · ${f.time || '—'}`),
           kvRow('Destino', f.destination || '—'),
+          kvRow('Pasajeros', `${f.passengers || '—'}`),
         ]),
         spacer(80),
       )
@@ -285,36 +286,89 @@ export function arrivalSection(data: FormData): Block[] {
   ]
 }
 
-/* ── Transfer ────────────────────────────── */
+/* ── Transfer (per-flight) ───────────────── */
 
 export function transferSection(data: FormData): Block[] {
   const blocks: Block[] = [sectionTitle('Transporte')]
 
-  if (data.needsTransfer === true) {
-    const rows = [
-      kvRow('Recogida', 'Aeropuerto Internacional de Punta Cana (PUJ)'),
-      kvRow('Entrega', '(nombre de la propiedad)', true),
-      kvRow('Fecha y hora', '(confirmar con vuelo de llegada)', true),
-      kvRow(
-        'Pasajeros',
-        `${data.passengers || data.adults + data.children} (${data.adults} adultos${data.children > 0 ? `, ${data.children} niños` : ''})`,
-      ),
-      ...(data.transferNotes ? [kvRow('Notas especiales', data.transferNotes)] : []),
-    ]
-    blocks.push(subHeading('Servicios de transfer confirmados'), kvTable(rows))
-  } else if (data.needsTransfer === false) {
+  // Collect all flights that have transfer info
+  const allFlights = [
+    ...data.arrivalFlights.map((f, i) => ({
+      flight: f,
+      label: `Llegada ${i + 1}`,
+      type: 'arrival' as const,
+    })),
+    ...data.departureFlights.map((f, i) => ({
+      flight: f,
+      label: `Salida ${i + 1}`,
+      type: 'departure' as const,
+    })),
+  ].filter((entry) => entry.flight.code)
+
+  const flightsWithTransfer = allFlights.filter((entry) => entry.flight.needsTransfer === true)
+  const flightsOwnTransport = allFlights.filter((entry) => entry.flight.needsTransfer === false)
+  const flightsUnspecified = allFlights.filter((entry) => entry.flight.needsTransfer === null)
+
+  if (flightsWithTransfer.length > 0) {
+    blocks.push(subHeading('Servicios de transfer confirmados'))
+
+    flightsWithTransfer.forEach((entry) => {
+      const f = entry.flight
+      const vehicle = TRANSFER_VEHICLES.find((v) => v.id === f.transferVehicleId)
+
+      const rows = [
+        kvRow('Vuelo', `${entry.label} — ${f.airline} ${f.code}`),
+        kvRow(
+          'Recogida',
+          entry.type === 'arrival'
+            ? 'Aeropuerto Internacional de Punta Cana (PUJ)'
+            : '(nombre de la propiedad)',
+        ),
+        kvRow(
+          'Entrega',
+          entry.type === 'arrival'
+            ? '(nombre de la propiedad)'
+            : 'Aeropuerto Internacional de Punta Cana (PUJ)',
+        ),
+        kvRow('Fecha y hora', `${f.date ? formatDate(f.date) : '—'} · ${f.time || '—'}`),
+        kvRow('Pasajeros', `${f.passengers || '—'}`),
+        ...(vehicle
+          ? [
+              kvRow(
+                'Vehículo',
+                `${vehicle.name} (${vehicle.capacity}) · $${vehicle.priceUsd} / trayecto`,
+              ),
+            ]
+          : [kvRow('Vehículo', '(por confirmar)', true)]),
+        ...(f.transferNotes ? [kvRow('Notas especiales', f.transferNotes)] : []),
+      ]
+
+      blocks.push(kvTable(rows), spacer(80))
+    })
+  }
+
+  if (flightsOwnTransport.length > 0) {
+    const names = flightsOwnTransport
+      .map((e) => `${e.label} (${e.flight.airline} ${e.flight.code})`)
+      .join(', ')
     blocks.push(
       new Paragraph({
         spacing: { before: 80, after: 80 },
         children: [
-          bodyText('El huésped ha indicado que cuenta con transporte propio.', {
+          bodyText(`Transporte propio: ${names}`, {
             italics: true,
             color: BRAND.muted,
           }),
         ],
       }),
     )
-  } else {
+  }
+
+  if (
+    flightsUnspecified.length > 0 &&
+    flightsWithTransfer.length === 0 &&
+    flightsOwnTransport.length === 0
+  ) {
     blocks.push(
       new Paragraph({
         spacing: { before: 80, after: 80 },

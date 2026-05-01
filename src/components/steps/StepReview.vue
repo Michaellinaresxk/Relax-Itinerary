@@ -18,9 +18,9 @@ const hasActivities = computed(() =>
   days.value.some(d => (state.dayActivities[toISOKey(d)] || []).length > 0),
 )
 
-const selectedVehicle = computed(() =>
-  TRANSFER_VEHICLES.find(v => v.id === state.transferVehicleId),
-)
+function vehicleFor(id: string) {
+  return TRANSFER_VEHICLES.find(v => v.id === id)
+}
 
 const selectedChef = computed(() =>
   CHEF_OPTIONS.find(c => c.id === state.chefTier),
@@ -103,50 +103,60 @@ function idLabel(type: string): string {
       </div>
     </section>
 
-    <!-- Flights -->
+    <!-- Flights & Transport -->
     <section class="sec">
-      <span class="sec__tag">Vuelos</span>
+      <span class="sec__tag">Vuelos y transporte</span>
+
       <template v-for="(f, i) in state.arrivalFlights.filter(f => f.code)" :key="'a' + i">
         <div class="row">
           <span class="row__l">Llegada {{ i + 1 }}</span>
-          <span class="row__v">{{ f.airline }} {{ f.code }} · {{ f.date }} {{ f.time }} · desde {{ f.origin }}</span>
+          <span class="row__v">{{ f.airline }} {{ f.code }} · {{ f.date }} {{ f.time }} · {{ f.passengers }} pax</span>
+        </div>
+        <div v-if="f.needsTransfer && vehicleFor(f.transferVehicleId)" class="row row--sub">
+          <span class="row__l">Transfer</span>
+          <span class="row__v">
+            {{ vehicleFor(f.transferVehicleId)!.name }}
+            ({{ vehicleFor(f.transferVehicleId)!.capacity }})
+            · ${{ vehicleFor(f.transferVehicleId)!.priceUsd }}
+          </span>
+        </div>
+        <div v-else-if="f.needsTransfer === false" class="row row--sub">
+          <span class="row__l">Transfer</span>
+          <span class="row__v empty-hint">Transporte propio</span>
+        </div>
+        <div v-if="f.transferNotes" class="row row--sub">
+          <span class="row__l">Notas</span>
+          <span class="row__v">{{ f.transferNotes }}</span>
         </div>
       </template>
+
       <template v-for="(f, i) in state.departureFlights.filter(f => f.code)" :key="'d' + i">
         <div class="row">
           <span class="row__l">Salida {{ i + 1 }}</span>
-          <span class="row__v">{{ f.airline }} {{ f.code }} · {{ f.date }} {{ f.time }} · hacia {{ f.destination
-          }}</span>
+          <span class="row__v">{{ f.airline }} {{ f.code }} · {{ f.date }} {{ f.time }} · {{ f.passengers }} pax · hacia
+            {{ f.destination }}</span>
+        </div>
+        <div v-if="f.needsTransfer && vehicleFor(f.transferVehicleId)" class="row row--sub">
+          <span class="row__l">Transfer</span>
+          <span class="row__v">
+            {{ vehicleFor(f.transferVehicleId)!.name }}
+            ({{ vehicleFor(f.transferVehicleId)!.capacity }})
+            · ${{ vehicleFor(f.transferVehicleId)!.priceUsd }}
+          </span>
+        </div>
+        <div v-else-if="f.needsTransfer === false" class="row row--sub">
+          <span class="row__l">Transfer</span>
+          <span class="row__v empty-hint">Transporte propio</span>
+        </div>
+        <div v-if="f.transferNotes" class="row row--sub">
+          <span class="row__l">Notas</span>
+          <span class="row__v">{{ f.transferNotes }}</span>
         </div>
       </template>
+
       <p v-if="!state.arrivalFlights.some(f => f.code) && !state.departureFlights.some(f => f.code)" class="empty-hint">
         No se ingresaron vuelos
       </p>
-    </section>
-
-    <!-- Transfer -->
-    <section class="sec">
-      <span class="sec__tag">Transporte</span>
-      <div class="row">
-        <span class="row__l">Transfer</span>
-        <span class="row__v">
-          {{ state.needsTransfer === true ? 'Transfer privado' : state.needsTransfer === false ? 'Transporte propio' :
-            'No especificado' }}
-        </span>
-      </div>
-      <template v-if="state.needsTransfer">
-        <div v-if="selectedVehicle" class="row">
-          <span class="row__l">Vehículo</span>
-          <span class="row__v">{{ selectedVehicle.name }} ({{ selectedVehicle.capacity }}) · ${{
-            selectedVehicle.priceUsd }} / trayecto</span>
-        </div>
-        <div class="row"><span class="row__l">Pasajeros</span><span class="row__v">{{ state.passengers }}</span></div>
-        <div v-if="selectedVehicle && state.passengers > selectedVehicle.maxPassengers" class="capacity-warn">
-          El vehículo seleccionado no tiene capacidad suficiente para {{ state.passengers }} personas.
-        </div>
-        <div v-if="state.transferNotes" class="row"><span class="row__l">Notas</span><span class="row__v">{{
-          state.transferNotes }}</span></div>
-      </template>
     </section>
 
     <!-- Activities -->
