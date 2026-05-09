@@ -49,7 +49,9 @@ function getActDetail(actId: string) {
 
 /** Count for any day (used in the progress dots) */
 function countForDay(dayIdx: number): number {
-  const key = toISOKey(days.value[dayIdx])
+  const day = days.value[dayIdx]
+  if (!day) return 0
+  const key = toISOKey(day)
   return (state.dayActivities[key] || []).length
 }
 

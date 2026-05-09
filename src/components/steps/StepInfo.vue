@@ -170,7 +170,7 @@ function setGuestFileRef(i: number, el: any) {
 
     <FormField label="Ocasión">
       <select class="inp" :value="state.tripMotive"
-        @change="updateField('tripMotive', ($event.target as HTMLSelectElement).value)">
+        @change="updateField('tripMotive', ($event.target as HTMLSelectElement).value as TripMotive)">
         <option value="">— Seleccionar —</option>
         <option v-for="opt in TRIP_MOTIVE_OPTIONS" :key="opt.id" :value="opt.id">
           {{ opt.label }}
