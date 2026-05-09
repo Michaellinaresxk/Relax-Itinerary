@@ -240,13 +240,6 @@ export const EQUIPMENT: EquipmentCatalogItem[] = [
     priceType: 'fixed',
     note: 'Tarifa puede variar en reservas de último momento',
   },
-  {
-    id: 'bikes',
-    name: 'Bicicletas',
-    image: 'https://images.unsplash.com/photo-1471506480208-91b3a4cc78be?w=400&q=80',
-    pricePerNight: null,
-    priceType: 'quote',
-  },
 ]
 
 export const EQUIPMENT_SCHEDULE = {
