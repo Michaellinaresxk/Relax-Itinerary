@@ -5,7 +5,7 @@ import { useFormData } from '@/composables/useFormData'
 import { useValidation } from '@/composables/useValidation'
 import { ID_TYPE_LABELS, TRIP_MOTIVE_OPTIONS } from '@/types'
 import type { IdType, TripMotive } from '@/types'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const {
   state, updateField, setChildren, updateChildAge,
@@ -27,9 +27,28 @@ const groupLabel = computed(() => {
   return parts.join(', ')
 })
 
+const totalGuests = computed(() => adultsCount.value + state.children)
+
 function onUpdate<K extends keyof typeof state>(field: K, value: (typeof state)[K]) {
   touch(field as string)
   updateField(field, value)
+}
+
+/* ── Adults stepper ──────────────────────── */
+/**
+ * Desired total adults (including main guest).
+ * Adjusting this adds/removes guest slots automatically.
+ */
+function setAdultsTarget(target: number) {
+  const desired = Math.max(1, target) // at least the main guest
+  const currentGuests = state.guests.length
+  const neededGuests = desired - 1 // main guest is always counted
+
+  if (neededGuests > currentGuests) {
+    for (let i = 0; i < neededGuests - currentGuests; i++) addGuest()
+  } else if (neededGuests < currentGuests) {
+    for (let i = currentGuests - 1; i >= neededGuests; i--) removeGuest(i)
+  }
 }
 
 /* ── File input handling ─────────────────── */
@@ -145,20 +164,21 @@ function setGuestFileRef(i: number, el: any) {
       </FormField>
     </div>
 
-    <!-- ── Trip motive ──────────────────────── -->
+    <!-- ── Trip motive — clean, no icons ─────── -->
     <div class="section-label">Motivo del viaje</div>
     <p class="hint">¿Están celebrando algo especial? Esto nos ayuda a personalizar tu experiencia.</p>
 
-    <div class="motive-grid">
-      <button v-for="opt in TRIP_MOTIVE_OPTIONS" :key="opt.id" class="motive-card"
-        :class="{ 'motive-card--active': state.tripMotive === opt.id }"
-        @click="updateField('tripMotive', state.tripMotive === opt.id ? '' : opt.id)">
-        <span class="motive-card__icon">{{ opt.icon }}</span>
-        <span class="motive-card__label">{{ opt.label }}</span>
-      </button>
-    </div>
+    <FormField label="Ocasión">
+      <select class="inp" :value="state.tripMotive"
+        @change="updateField('tripMotive', ($event.target as HTMLSelectElement).value as TripMotive)">
+        <option value="">— Seleccionar —</option>
+        <option v-for="opt in TRIP_MOTIVE_OPTIONS" :key="opt.id" :value="opt.id">
+          {{ opt.label }}
+        </option>
+      </select>
+    </FormField>
 
-    <div v-if="state.tripMotive === 'other' || state.tripMotive === 'celebration'" style="margin-top: 12px">
+    <div v-if="state.tripMotive === 'other' || state.tripMotive === 'celebration'" style="margin-top: 4px">
       <FormField :label="state.tripMotive === 'other' ? 'Cuéntanos más' : 'Detalles de la celebración'">
         <input class="inp" :value="state.tripMotiveDetail"
           :placeholder="state.tripMotive === 'other' ? 'Ej: Reunión familiar' : 'Ej: Cumpleaños de María, 15 años'"
@@ -166,23 +186,42 @@ function setGuestFileRef(i: number, el: any) {
       </FormField>
     </div>
 
-    <!-- ── Group size ───────────────────────── -->
+    <!-- ── Group size — stepper for adults ────── -->
     <div class="section-label">Grupo</div>
+    <p class="hint">
+      Indica cuántos adultos e hijos conforman el grupo.
+      Se generarán automáticamente los campos para cada invitado.
+    </p>
 
     <div class="group-summary">
       <div class="group-summary__item">
-        <span class="group-summary__number">{{ adultsCount }}</span>
-        <span class="group-summary__label">{{ adultsCount === 1 ? 'Adulto' : 'Adultos' }}</span>
-        <span class="group-summary__hint">Huésped principal + invitados</span>
-      </div>
-      <div class="group-summary__sep" />
-      <div class="group-summary__item">
-        <div class="children-control">
-          <button class="children-control__btn" @click="setChildren(Math.max(0, state.children - 1))">−</button>
-          <span class="group-summary__number">{{ state.children }}</span>
-          <button class="children-control__btn" @click="setChildren(state.children + 1)">+</button>
+        <span class="group-summary__label">Adultos</span>
+        <div class="stepper">
+          <button class="stepper__btn" :disabled="adultsCount <= 1" @click="setAdultsTarget(adultsCount - 1)">−</button>
+          <span class="stepper__value">{{ adultsCount }}</span>
+          <button class="stepper__btn" @click="setAdultsTarget(adultsCount + 1)">+</button>
         </div>
-        <span class="group-summary__label">{{ state.children === 1 ? 'Niño' : 'Niños' }}</span>
+        <span class="group-summary__hint">Incluye al huésped principal</span>
+      </div>
+
+      <div class="group-summary__sep" />
+
+      <div class="group-summary__item">
+        <span class="group-summary__label">Niños</span>
+        <div class="stepper">
+          <button class="stepper__btn" :disabled="state.children <= 0"
+            @click="setChildren(state.children - 1)">−</button>
+          <span class="stepper__value">{{ state.children }}</span>
+          <button class="stepper__btn" @click="setChildren(state.children + 1)">+</button>
+        </div>
+        <span class="group-summary__hint">Menores de 18 años</span>
+      </div>
+
+      <div class="group-summary__sep" />
+
+      <div class="group-summary__item">
+        <span class="group-summary__total">{{ totalGuests }}</span>
+        <span class="group-summary__label">Total</span>
       </div>
     </div>
 
@@ -197,12 +236,15 @@ function setGuestFileRef(i: number, el: any) {
       </div>
     </div>
 
-    <!-- ── Guest list ───────────────────────── -->
-    <Accordion title="Lista de invitados" :badge="state.guests.filter(g => g.name).length || undefined" default-open>
+    <!-- ── Guest list (auto-generated from stepper) ── -->
+    <Accordion v-if="state.guests.length > 0" title="Datos de invitados"
+      :badge="state.guests.filter(g => g.name).length || undefined" default-open>
       <p class="hint">
-        Total del grupo: {{ adultsCount + state.children }}
-        ({{ groupLabel }}).
-        Agrega a cada invitado adulto aparte del huésped principal.
+        {{ adultsCount }} {{ adultsCount === 1 ? 'adulto' : 'adultos' }}
+        <template v-if="state.children > 0">, {{ state.children }} {{ state.children === 1 ? 'niño' : 'niños'
+          }}</template>
+        — total {{ totalGuests }} huéspedes.
+        Completa los datos de cada invitado adulto.
       </p>
 
       <div v-for="(g, i) in state.guests" :key="i" class="guest-card">
@@ -267,7 +309,7 @@ function setGuestFileRef(i: number, el: any) {
         </div>
       </div>
 
-      <button class="btn-add" @click="addGuest">+ Agregar invitado</button>
+      <button class="btn-add" @click="addGuest">+ Agregar invitado adicional</button>
     </Accordion>
 
     <!-- ── Special notes ────────────────────── -->
@@ -437,55 +479,13 @@ function setGuestFileRef(i: number, el: any) {
   opacity: 0.7;
 }
 
-/* ── Trip motive grid ────────────────────── */
-.motive-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.motive-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 14px 8px;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  background: transparent;
-  cursor: pointer;
-  transition: all var(--duration) var(--ease);
-}
-
-.motive-card:hover {
-  border-color: var(--c-border-hover);
-}
-
-.motive-card--active {
-  border-color: var(--c-accent-soft);
-  background: var(--c-accent-whisper);
-}
-
-.motive-card__icon {
-  font-size: 22px;
-  line-height: 1;
-}
-
-.motive-card__label {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--c-deep);
-  text-align: center;
-  line-height: 1.2;
-}
-
-/* ── Group summary ───────────────────────── */
+/* ── Group summary — stepper layout ──────── */
 .group-summary {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 28px;
-  padding: 20px;
+  padding: 24px 20px;
   background: var(--c-bg);
   border-radius: var(--radius-md);
   margin-bottom: 18px;
@@ -493,7 +493,7 @@ function setGuestFileRef(i: number, el: any) {
 
 .group-summary__sep {
   width: 1px;
-  height: 40px;
+  height: 48px;
   background: var(--c-border);
 }
 
@@ -501,19 +501,11 @@ function setGuestFileRef(i: number, el: any) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-}
-
-.group-summary__number {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 300;
-  color: var(--c-deep);
-  line-height: 1;
+  gap: 6px;
 }
 
 .group-summary__label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 400;
   color: var(--c-soft);
   text-transform: uppercase;
@@ -526,20 +518,29 @@ function setGuestFileRef(i: number, el: any) {
   font-weight: 300;
 }
 
-.children-control {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+.group-summary__total {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 300;
+  color: var(--c-accent);
+  line-height: 1;
 }
 
-.children-control__btn {
-  width: 28px;
-  height: 28px;
+/* ── Stepper control ─────────────────────── */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stepper__btn {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 1px solid var(--c-border);
   background: transparent;
   color: var(--c-soft);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 300;
   cursor: pointer;
   display: flex;
@@ -548,9 +549,24 @@ function setGuestFileRef(i: number, el: any) {
   transition: all var(--duration) var(--ease);
 }
 
-.children-control__btn:hover {
+.stepper__btn:hover:not(:disabled) {
   border-color: var(--c-accent-soft);
   color: var(--c-accent);
+}
+
+.stepper__btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.stepper__value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--c-deep);
+  line-height: 1;
+  min-width: 24px;
+  text-align: center;
 }
 
 /* ── Ages ─────────────────────────────────── */
@@ -660,17 +676,13 @@ function setGuestFileRef(i: number, el: any) {
 }
 
 @media (max-width: 480px) {
-  .motive-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .guest-card {
     padding: 14px;
   }
 
   .group-summary {
-    gap: 20px;
-    padding: 16px;
+    gap: 16px;
+    padding: 18px 12px;
   }
 }
 </style>
