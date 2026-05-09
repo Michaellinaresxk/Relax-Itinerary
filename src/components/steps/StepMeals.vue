@@ -15,14 +15,14 @@ const activeDayIdx = ref(0)
 const activeDay = computed<Date>(() => days.value[activeDayIdx.value] ?? new Date())
 const activeDayKey = computed(() => activeDay.value ? toISOKey(activeDay.value) : '')
 
-function getMealVal(meal: string): string {
-  return state.dayMeals[activeDayKey.value]?.[meal] || ''
-}
+/* ── Chef toggle ─────────────────────────── */
+const wantChef = ref<boolean | null>(state.chefTier ? true : null)
 
-function filledMealsForDay(dayKey: string): number {
-  const m = state.dayMeals[dayKey]
-  if (!m) return 0
-  return Object.values(m).filter(v => v.trim()).length
+function setWantChef(val: boolean) {
+  wantChef.value = val
+  if (!val) {
+    updateField('chefTier', null)
+  }
 }
 
 function selectChef(tier: ChefTier) {
@@ -37,6 +37,27 @@ const chefTotal = computed(() => {
   if (!selectedChef.value) return 0
   return selectedChef.value.pricePerDay * numDays.value
 })
+
+/* ── Allergies toggle ────────────────────── */
+const hasAllergies = ref<boolean | null>(state.allergies ? true : null)
+
+function setHasAllergies(val: boolean) {
+  hasAllergies.value = val
+  if (!val) {
+    updateField('allergies', '')
+  }
+}
+
+/* ── Meals helpers ───────────────────────── */
+function getMealVal(meal: string): string {
+  return state.dayMeals[activeDayKey.value]?.[meal] || ''
+}
+
+function filledMealsForDay(dayKey: string): number {
+  const m = state.dayMeals[dayKey]
+  if (!m) return 0
+  return Object.values(m).filter(v => v.trim()).length
+}
 </script>
 
 <template>
@@ -46,30 +67,42 @@ const chefTotal = computed(() => {
     </p>
 
     <template v-else>
-      <!-- Chef service -->
+      <!-- ── Chef service ─────────────────── -->
       <div class="section-label">Servicio de cocina</div>
-      <p class="hint">Selecciona el tipo de servicio. Puedes omitir si no necesitas chef.</p>
+      <p class="hint">¿Te gustaría contratar un chef o cocinero durante tu estancia?</p>
 
-      <div class="chef-grid">
-        <div v-for="opt in CHEF_OPTIONS" :key="opt.id!" class="chef-card"
-          :class="{ 'chef-card--selected': state.chefTier === opt.id }" @click="selectChef(opt.id)">
-          <div class="chef-card__top">
-            <span class="chef-card__name">{{ opt.name }}</span>
-            <span class="chef-card__price">${{ opt.pricePerDay }} / día</span>
-          </div>
-          <p class="chef-card__desc">{{ opt.description }}</p>
-          <div v-if="state.chefTier === opt.id" class="chef-card__total">
-            ~${{ opt.pricePerDay * numDays }} total ({{ numDays }} días)
-          </div>
-        </div>
+      <div class="toggle-row">
+        <button class="toggle-btn" :class="{ 'toggle-btn--active': wantChef === true }" @click="setWantChef(true)">Sí,
+          por favor</button>
+        <button class="toggle-btn" :class="{ 'toggle-btn--active': wantChef === false }" @click="setWantChef(false)">No,
+          gracias</button>
       </div>
 
-      <p class="chef-note">{{ CHEF_NOTE }}</p>
-      <p class="cash-note">{{ CASH_RATE_NOTE }}</p>
+      <!-- Chef options — only visible if wantChef === true -->
+      <template v-if="wantChef === true">
+        <p class="hint" style="margin-top: 16px">Selecciona el tipo de servicio:</p>
+
+        <div class="chef-grid">
+          <div v-for="opt in CHEF_OPTIONS" :key="opt.id!" class="chef-card"
+            :class="{ 'chef-card--selected': state.chefTier === opt.id }" @click="selectChef(opt.id)">
+            <div class="chef-card__top">
+              <span class="chef-card__name">{{ opt.name }}</span>
+              <span class="chef-card__price">${{ opt.pricePerDay }} / día</span>
+            </div>
+            <p class="chef-card__desc">{{ opt.description }}</p>
+            <div v-if="state.chefTier === opt.id" class="chef-card__total">
+              ~${{ opt.pricePerDay * numDays }} total ({{ numDays }} días)
+            </div>
+          </div>
+        </div>
+
+        <p class="chef-note">{{ CHEF_NOTE }}</p>
+        <p class="cash-note">{{ CASH_RATE_NOTE }}</p>
+      </template>
 
       <div class="divider" />
 
-      <!-- Grocery -->
+      <!-- ── Grocery ──────────────────────── -->
       <div class="section-label">Servicio de compras</div>
       <div class="opt-grid">
         <OptionCard icon="" title="Sí, por favor" description="Nos encargamos de todo"
@@ -92,7 +125,7 @@ const chefTotal = computed(() => {
 
       <div class="divider" />
 
-      <!-- Meal preferences -->
+      <!-- ── Meal preferences ─────────────── -->
       <div class="section-label">Preferencias por día</div>
 
       <div class="day-pills">
@@ -116,15 +149,26 @@ const chefTotal = computed(() => {
         </div>
       </div>
 
-      <!-- Allergies in this step since it's food-related -->
+      <!-- ── Allergies — yes/no toggle ────── -->
       <div class="divider" />
       <div class="section-label">Alergias</div>
-      <FormField label="Alergias o restricciones alimentarias"
-        hint="De cualquier invitado — esto es importante para su seguridad.">
-        <textarea class="inp" style="min-height:56px" :value="state.allergies"
-          placeholder="Ej: Konstance es alérgica a los frutos secos."
-          @input="updateField('allergies', ($event.target as HTMLTextAreaElement).value)" />
-      </FormField>
+      <p class="hint">¿Algún huésped tiene alergias o restricciones alimentarias?</p>
+
+      <div class="toggle-row">
+        <button class="toggle-btn" :class="{ 'toggle-btn--active': hasAllergies === true }"
+          @click="setHasAllergies(true)">Sí</button>
+        <button class="toggle-btn" :class="{ 'toggle-btn--active': hasAllergies === false }"
+          @click="setHasAllergies(false)">No</button>
+      </div>
+
+      <div v-if="hasAllergies === true" class="allergy-detail">
+        <FormField label="Especifica las alergias"
+          hint="Indica el nombre del huésped y la alergia — esto es importante para su seguridad.">
+          <textarea class="inp" style="min-height:56px" :value="state.allergies"
+            placeholder="Ej: Konstance es alérgica a los frutos secos."
+            @input="updateField('allergies', ($event.target as HTMLTextAreaElement).value)" />
+        </FormField>
+      </div>
     </template>
   </div>
 </template>
@@ -162,7 +206,55 @@ const chefTotal = computed(() => {
   font-weight: 300;
 }
 
-/* Chef cards */
+/* ── Toggle row (yes/no) ─────────────────── */
+.toggle-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font: 400 13px/1 var(--font-body);
+  color: var(--c-soft);
+  cursor: pointer;
+  transition: all var(--duration) var(--ease);
+  letter-spacing: 0.3px;
+}
+
+.toggle-btn:hover {
+  border-color: var(--c-border-hover);
+}
+
+.toggle-btn--active {
+  background: var(--c-deep);
+  color: var(--c-white);
+  border-color: var(--c-deep);
+}
+
+/* ── Allergy detail (animated in) ────────── */
+.allergy-detail {
+  margin-top: 14px;
+  animation: fadeIn 0.25s var(--ease);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Chef cards ──────────────────────────── */
 .chef-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -238,7 +330,7 @@ const chefTotal = computed(() => {
   font-style: italic;
 }
 
-/* Grocery */
+/* ── Grocery ─────────────────────────────── */
 .opt-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -258,7 +350,7 @@ const chefTotal = computed(() => {
   line-height: 1.5;
 }
 
-/* Day pills */
+/* ── Day pills ───────────────────────────── */
 .day-pills {
   display: flex;
   gap: 6px;
@@ -314,7 +406,7 @@ const chefTotal = computed(() => {
   font-weight: 300;
 }
 
-/* Meal cards */
+/* ── Meal cards ──────────────────────────── */
 .meal-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -372,6 +464,10 @@ const chefTotal = computed(() => {
   .meal-grid,
   .chef-grid {
     grid-template-columns: 1fr;
+  }
+
+  .toggle-row {
+    flex-direction: column;
   }
 }
 </style>
